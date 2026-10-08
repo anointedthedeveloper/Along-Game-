@@ -15,7 +15,7 @@ import { useRealtime } from '@/hooks/useRealtime';
 import { useGame } from '@/store/game';
 import { usePlan } from '@/store/plan';
 import { useUI } from '@/store/ui';
-import { worldApi } from '@/services';
+import { rideApi, worldApi } from '@/services';
 
 export default function Play() {
   const stage = useMemo(() => new Stage(), []);
@@ -37,6 +37,17 @@ export default function Play() {
       usePlan.setState({ from: null, to: null });
       useUI.getState().select(null);
     };
+  }, []);
+
+  // Without a socket (serverless hosting) the matching steps of a requested ride are picked up by polling.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const r = useGame.getState().ride;
+      if (r && (r.status === 'REQUESTED' || r.status === 'MATCHED')) {
+        rideApi.get(r.id).then((res) => useGame.getState().setRide(res.ride)).catch(() => undefined);
+      }
+    }, 1500);
+    return () => clearInterval(id);
   }, []);
 
   // Keep the camera on the player's start position until a trip begins following them.

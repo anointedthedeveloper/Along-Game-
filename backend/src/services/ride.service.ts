@@ -240,7 +240,26 @@ export async function completeRide(user: UserDoc, id: string) {
     await Rating.create({ ride: ride._id, fromUser: null, toUser: user._id, targetRole: 'DRIVER', targetName: user.name, stars: rating.stars, tags: rating.tags, comment: rating.comment, factors: rating.factors });
     Object.assign(summary, { earnings: ride.fare.final, tip, fuelUsed: Math.round(fuelUsed * 100) / 100, wear: Math.round(wear * 10) / 10, xp, rating: rating.stars, ratingComment: rating.comment, ratingFactors: rating.factors, levelUp, late });
   } else {
-    await pay(userId, Math.max(1, ride.fare.final), 'RIDE_PAYMENT', `${ride.origin.name} → ${ride.destination.name}`, ride.paymentMethod, { ride: id });
+    let unpaid = 0;
+    const desc = `${ride.origin.name} → ${ride.destination.name}`;
+    try {
+      await pay(userId, Math.max(1, ride.fare.final), 'RIDE_PAYMENT', desc, ride.paymentMethod, { ride: id });
+    } catch (err) {
+      if (!(err instanceof ApiError) || err.status !== 402) throw err;
+      // Roadside extras can push the fare past what the player carries; the driver takes what is there.
+      const balances = await User.findById(userId).select('cash bank');
+      let remaining = ride.fare.final;
+      for (const account of ['CASH', 'BANK'] as const) {
+        const have = account === 'CASH' ? balances?.cash ?? 0 : balances?.bank ?? 0;
+        const take = Math.min(have, remaining);
+        if (take > 0) {
+          await debit(userId, take, 'RIDE_PAYMENT', `${desc} (part-payment)`, { ride: id, account });
+          remaining -= take;
+        }
+      }
+      unpaid = remaining;
+    }
+    if (unpaid > 0) summary.unpaid = unpaid;
     progress.ridesAsPassenger += 1;
     const xp = 8 + Math.round(ride.distanceKm);
     ride.xpAwarded = xp;
@@ -378,5 +397,10 @@ export async function acceptOffer(user: UserDoc, id: string) {
   ride.status = 'DRIVER_ARRIVING';
   ride.expiresAt = undefined;
   await ride.save();
+  // Every other open offer is stale the moment this one is taken.
+  await Ride.updateMany(
+    { driver: user._id, kind: 'DRIVER_OFFER', status: 'REQUESTED', _id: { $ne: ride._id } },
+    { $set: { status: 'CANCELLED', cancelledBy: 'SYSTEM', cancelReason: 'SUPERSEDED', cancelledAt: now } },
+  );
   return withEvents(ride, String(user._id));
 }

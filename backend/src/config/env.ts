@@ -29,5 +29,7 @@ export const env = {
     .map((s) => s.trim().replace(/\/$/, ''))
     .filter(Boolean),
   /** Game minutes that pass per real-time second. 1 => a full game day lasts 24 real minutes. */
+  /** Comma-separated emails that are granted the ADMIN role when they register. */
+  adminEmails: (process.env.ADMIN_EMAILS ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
   gameSpeed: Number(process.env.GAME_SPEED ?? 1),
 } as const;

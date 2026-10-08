@@ -45,6 +45,7 @@ export function SummaryModal() {
       </div>
       <div className="space-y-4 p-5 pt-2">
         <RouteLine ride={ride} compact />
+        {!driver && !!s.unpaid && <p className="rounded-lg border border-taxi/40 bg-taxi/10 p-3 text-sm">You were short by {naira(s.unpaid)} — the driver took everything you had. Keep more cash handy.</p>}
         {s.levelUp && (
           <div className="flex items-center gap-3 rounded-xl border border-taxi/60 bg-taxi/10 p-3">
             <Award className="h-8 w-8 text-taxi" />

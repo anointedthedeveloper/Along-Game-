@@ -2,7 +2,7 @@
   "name": "along-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "ALONG game API — authoritative game logic, wallet, rides and real-time events",
+  "description": "ALONG game API \u2014 authoritative game logic, wallet, rides and real-time events",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -11,7 +11,9 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "seed": "tsx src/scripts/seed.ts",
-    "test": "tsx src/scripts/smoke.ts"
+    "test": "tsx src/scripts/smoke.ts",
+    "test:logic": "tsx src/scripts/logic.test.ts",
+    "test:all": "npm run test:logic && npm run test"
   },
   "engines": {
     "node": ">=18"

@@ -38,6 +38,7 @@ export class Stage {
   private tripProgress = 0;
   private tripRideId: string | null = null;
   private completing = false;
+  private retryCompleteAt = 0;
   private travelRoute: { key: string; leg: Leg } | null = null;
   private travelLoading = '';
   private travelResolved = '';
@@ -93,6 +94,28 @@ export class Stage {
     return { pos: fromWorld(s.p), heading };
   }
 
+  private hotCache = { at: 0, ids: [] as string[] };
+
+  /** Districts whose passenger demand is highest for the current time of day (a hint, not authoritative). */
+  private hotDistricts(g: ReturnType<typeof useGame.getState>): string[] {
+    if (performance.now() - this.hotCache.at < 3000) return this.hotCache.ids;
+    const map = g.map;
+    const w = g.world;
+    if (!map || !w) return [];
+    const h = ((w.clock.minuteOfDay + ((Date.now() - g.worldReceivedAt) / 1000) * w.clock.speed) % 1440) / 60;
+    const unlocked = new Set(g.progress?.unlockedDistricts ?? []);
+    const score = (d: (typeof map.districts)[number]) => {
+      let s = d.demand;
+      if (h >= 5 && h < 10) s *= d.kind === 'RESIDENTIAL' || d.kind === 'MIXED' ? 1.5 : 1;
+      else if (h >= 16 && h < 20) s *= d.kind === 'COMMERCIAL' || d.kind === 'GOVERNMENT' ? 1.5 : 1;
+      else if (h >= 20 || h < 5) s *= d.id === 'wuse' || d.id === 'jabi' ? 1.6 : 0.8;
+      return s;
+    };
+    const ids = map.districts.filter((d) => unlocked.has(d.id)).sort((a, b) => score(b) - score(a)).slice(0, 2).map((d) => d.id);
+    this.hotCache = { at: performance.now(), ids };
+    return ids;
+  }
+
   private lastT = performance.now();
 
   /** Called every animation frame by the engine. */
@@ -113,9 +136,11 @@ export class Stage {
     f.follow = null;
     f.selectedLocation = this.selected;
     f.highlightTypes = this.highlight;
+    f.hot = [];
 
     const { me, ride, vehicle, map } = g;
     if (!me || !map) return f;
+    if (me.mode === 'DRIVER' && g.progress?.day.active && !ride) f.hot = this.hotDistricts(g);
     const now = Date.now() + g.skew;
     const loc = map.locations.find((l) => l.key === me.locationKey);
     const here: LatLng = loc ? loc.pos : [9.0745, 7.4755];
@@ -180,10 +205,13 @@ export class Stage {
         f.pins.push(dropPin);
         if (activeEvent) f.pins.push({ id: 'event', pos, kind: 'event', severity: activeEvent.severity });
         f.follow = pos;
-        if (p >= 0.999 && !this.completing && !activeEvent && !this.snap.eventResult) {
+        if (p >= 0.999 && !this.completing && !activeEvent && !this.snap.eventResult && performance.now() > this.retryCompleteAt) {
           this.completing = true;
           void completeRide(ride.id).then((ok) => {
-            if (!ok) this.completing = false;
+            if (!ok) {
+              this.completing = false;
+              this.retryCompleteAt = performance.now() + 6000;
+            }
           });
         }
       }

@@ -1,0 +1,29 @@
+# Render blueprint: the API and the static site deploy independently.
+services:
+  - type: web
+    name: along-api
+    runtime: docker
+    rootDir: backend
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false        # MongoDB Atlas connection string
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        sync: false        # e.g. https://along.example.com
+  - type: web
+    name: along-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false        # e.g. https://api.along.example.com/api
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

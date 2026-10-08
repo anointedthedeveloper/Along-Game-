@@ -31,24 +31,24 @@ export function TopHud() {
 
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-[600] flex flex-col gap-2 p-2.5 sm:p-3">
-      <div className="flex items-stretch gap-2">
-        <button aria-label="Menu" onClick={() => setMenu(true)} className="pointer-events-auto flex shrink-0 items-center justify-center rounded-xl border border-white/10 bg-asphalt-900/90 px-3 backdrop-blur hover:bg-asphalt-800">
+      <div className="flex flex-wrap items-stretch gap-2 sm:flex-nowrap">
+        <button aria-label="Menu" onClick={() => setMenu(true)} className="pointer-events-auto order-1 flex shrink-0 items-center justify-center rounded-xl border border-white/10 bg-asphalt-900/90 px-3 backdrop-blur hover:bg-asphalt-800">
           <Menu className="h-5 w-5" />
         </button>
 
-        <div className="pointer-events-auto flex min-w-0 flex-1 items-center gap-x-5 overflow-x-auto rounded-xl border border-white/10 bg-asphalt-900/90 px-4 py-2 backdrop-blur scroll-thin">
+        <div className="pointer-events-auto order-3 flex w-full min-w-0 items-center justify-between gap-x-4 overflow-x-auto rounded-xl sm:order-2 sm:w-auto sm:flex-1 sm:justify-start sm:gap-x-5 border border-white/10 bg-asphalt-900/90 px-4 py-2 backdrop-blur scroll-thin">
           <div className="shrink-0">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-asphalt-300">{driver ? 'Cash' : 'Cash · Bank'}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-asphalt-300">Cash</p>
             <p className="font-display text-2xl font-extrabold leading-none text-cream tabular">{naira(me?.cash)}</p>
-            {!driver && <p className="text-[11px] text-asphalt-300 tabular">Bank {naira(me?.bank)}</p>}
+            <p className="text-[11px] text-asphalt-300 tabular">Bank {naira(me?.bank)}</p>
           </div>
           {driver && vehicle && (
             <>
               <div className="hidden w-px self-stretch bg-white/10 sm:block" />
-              <div className="w-24 shrink-0 sm:w-32">
+              <div className="w-20 shrink-0 sm:w-32">
                 <Meter label="Fuel" value={vehicle.fuelPercent} right={`${vehicle.fuelPercent}%`} />
               </div>
-              <div className="w-24 shrink-0 sm:w-32">
+              <div className="w-20 shrink-0 sm:w-32">
                 <Meter label="Vehicle" value={vehicle.condition} right={`${Math.round(vehicle.condition)}%`} />
               </div>
               <div className="shrink-0">
@@ -60,7 +60,7 @@ export function TopHud() {
               </div>
             </>
           )}
-          {progress && (
+          {progress && driver && (
             <Link to="/profile" className="hidden shrink-0 md:block">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-asphalt-300">Lv {progress.level} · {progress.title}</p>
               <div className="mt-1 h-1.5 w-28 overflow-hidden rounded-full bg-white/10">
@@ -70,7 +70,7 @@ export function TopHud() {
           )}
         </div>
 
-        <div className="pointer-events-auto flex shrink-0 items-center gap-3 rounded-xl border border-white/10 bg-asphalt-900/90 px-3.5 py-2 backdrop-blur">
+        <div className="pointer-events-auto order-2 ml-auto flex shrink-0 items-center gap-3 rounded-xl border border-white/10 bg-asphalt-900/90 px-3.5 py-2 backdrop-blur sm:order-3 sm:ml-0">
           <WeatherIcon kind={world?.weather.kind ?? 'SUNNY'} night={night} />
           <div className="text-right leading-tight">
             <p className="font-display text-2xl font-extrabold tabular">{clock.label}</p>
@@ -91,7 +91,7 @@ export function TopHud() {
         )}
         {driver && progress?.day.active && (
           <span className="pointer-events-auto flex items-center gap-1 rounded-full border border-abuja/50 bg-asphalt-900/85 px-2.5 py-1 text-abuja backdrop-blur">
-            <Wallet className="h-3 w-3" /> Day {progress.day.number} · {naira(progress.day.earnings)} · {progress.day.rides} rides
+            <Wallet className="h-3 w-3" /> Day {progress.day.number} · +{naira(progress.day.earnings)} · −{naira(progress.day.expenses)} · {progress.day.rides} rides
           </span>
         )}
       </div>

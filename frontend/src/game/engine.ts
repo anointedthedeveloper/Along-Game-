@@ -34,6 +34,8 @@ export interface FrameState {
   follow?: LatLng | null;
   selectedLocation?: string | null;
   highlightTypes?: string[];
+  /** District ids with unusually high demand right now (driver hint). */
+  hot?: string[];
 }
 
 export interface EnvState {
@@ -259,6 +261,8 @@ export class CityEngine {
     this.drawWeather(ctx, size, env, dt);
 
     // map furniture on top of the lighting
+    this.drawHot(ctx, size, z, f);
+    if (z >= 15.5) this.drawRoadNames(ctx, size);
     this.drawLabelsAndPois(ctx, size, z, f);
     this.drawPins(ctx, f, z);
     for (const a of f.actors) {
@@ -577,6 +581,58 @@ export class CityEngine {
   }
 
   /* ------------------------------------------------- labels, POIs, markers */
+
+  private drawHot(ctx: CanvasRenderingContext2D, size: L.Point, z: number, f: FrameState) {
+    if (!f.hot?.length || z > 16.5) return;
+    const pulse = 0.6 + 0.4 * Math.sin(this.t * 2);
+    for (const id of f.hot) {
+      const d = this.opts.data.districts.find((x) => x.id === id);
+      if (!d) continue;
+      const s = this.map.latLngToContainerPoint(d.center);
+      const mpp = (156543.03 * Math.cos((9.06 * Math.PI) / 180)) / 2 ** this.map.getZoom();
+      const r = Math.min(520, (d.radiusKm * 1000 * 0.7) / mpp);
+      if (s.x < -r || s.y < -r || s.x > size.x + r || s.y > size.y + r) continue;
+      const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r);
+      g.addColorStop(0, `rgba(255,150,40,${0.3 * pulse})`);
+      g.addColorStop(1, 'rgba(255,150,40,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      this.drawTag(ctx, 'BUSY ▲', s.x, s.y + 22, '#ff9a2e', '#2a1500');
+    }
+  }
+
+  private drawRoadNames(ctx: CanvasRenderingContext2D, size: L.Point) {
+    ctx.save();
+    ctx.font = '600 11px Barlow, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const r of this.scene.roads) {
+      if (r.cls === 'LOCAL') continue;
+      const mid = r.pts[Math.floor(r.pts.length / 2)];
+      const a = r.pts[Math.floor(r.pts.length / 2) - 1] ?? r.pts[0];
+      const b = r.pts[Math.floor(r.pts.length / 2) + 1] ?? r.pts[r.pts.length - 1];
+      const s = this.worldToScreen(mid);
+      if (s.x < 20 || s.y < 20 || s.x > size.x - 20 || s.y > size.y - 20) continue;
+      const sa = this.worldToScreen(a);
+      const sb = this.worldToScreen(b);
+      let ang = Math.atan2(sb.y - sa.y, sb.x - sa.x);
+      if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI;
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(ang);
+      const text = r.name.toUpperCase();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(40,42,44,0.75)';
+      ctx.strokeText(text, 0, 0);
+      ctx.fillStyle = 'rgba(245,242,230,0.92)';
+      ctx.fillText(text, 0, 0);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
 
   private drawLabelsAndPois(ctx: CanvasRenderingContext2D, size: L.Point, z: number, f: FrameState) {
     const hi = new Set(f.highlightTypes ?? []);

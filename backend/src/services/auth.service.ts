@@ -36,7 +36,7 @@ export async function register(input: { name: string; email: string; password: s
   const exists = await User.exists({ email: input.email.toLowerCase() });
   if (exists) throw ApiError.conflict('An account with this email already exists', 'EMAIL_TAKEN');
   const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
-  const user = await User.create({ name: input.name, email: input.email, passwordHash, mode: input.mode, locationKey: START_LOCATION_KEY, passwordChangedAt: new Date(0) });
+  const user = await User.create({ name: input.name, email: input.email, passwordHash, mode: input.mode, role: env.adminEmails.includes(input.email.toLowerCase()) ? 'ADMIN' : 'PLAYER', locationKey: START_LOCATION_KEY, passwordChangedAt: new Date(0) });
   await ensureProgress(String(user._id));
   await createStarterVehicle(user);
   await credit(String(user._id), STARTER_CASH, 'STARTER_GRANT', 'Welcome to ALONG — starter cash');

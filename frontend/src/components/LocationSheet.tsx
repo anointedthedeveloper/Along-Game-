@@ -25,6 +25,9 @@ export function LocationSheet() {
   const loc = map?.locations.find((l) => l.key === key) ?? null;
   const here = me?.locationKey === key && !me?.travel;
   const driver = me?.mode === 'DRIVER';
+  const progress = useGame((s) => s.progress);
+  const district = map?.districts.find((d) => d.id === loc?.district);
+  const locked = driver && !!district && !!progress && district.unlockLevel > progress.level;
 
   useEffect(() => {
     setInfo(null);
@@ -53,6 +56,7 @@ export function LocationSheet() {
             </div>
             <p className="font-display text-3xl font-extrabold uppercase leading-none">{loc.name}</p>
             <p className="mt-1 text-sm text-asphalt-300">{loc.description}</p>
+            {locked && <p className="mt-1 text-xs font-semibold text-taxi">Ride requests from {district?.name} unlock at driver level {district?.unlockLevel}.</p>}
           </div>
           <button aria-label="Close" onClick={() => select(null)} className="rounded-full bg-white/10 p-1.5"><X className="h-4 w-4" /></button>
         </div>

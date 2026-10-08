@@ -71,7 +71,7 @@ export async function credit(
   const value = Math.floor(amount);
   if (!(value > 0)) throw ApiError.badRequest('Amount must be a positive number');
   const field = opts.account === 'BANK' ? 'bank' : 'cash';
-  const user = await User.findByIdAndUpdate(userId, { $inc: { [field]: value } }, { new: true });
+  const user = await User.findByIdAndUpdate(userId, { $inc: { [field]: value } }, { returnDocument: 'after' });
   if (!user) throw ApiError.notFound('User not found');
   const balances = { cash: user.cash, bank: user.bank };
   await record(userId, type, value, description, balances, opts.account ?? 'CASH', opts);
@@ -89,7 +89,7 @@ export async function debit(
   const value = Math.ceil(amount);
   if (!(value > 0)) throw ApiError.badRequest('Amount must be a positive number');
   const field = opts.account === 'BANK' ? 'bank' : 'cash';
-  const user = await User.findOneAndUpdate({ _id: userId, [field]: { $gte: value } }, { $inc: { [field]: -value } }, { new: true });
+  const user = await User.findOneAndUpdate({ _id: userId, [field]: { $gte: value } }, { $inc: { [field]: -value } }, { returnDocument: 'after' });
   if (!user) {
     throw ApiError.paymentRequired(
       `You need ₦${value.toLocaleString('en-NG')} in your ${field === 'bank' ? 'bank account' : 'cash'} for this`,
@@ -152,7 +152,7 @@ async function move(userId: string, amount: number, from: 'cash' | 'bank', to: '
   const user = await User.findOneAndUpdate(
     { _id: userId, [from]: { $gte: value } },
     { $inc: { [from]: -value, [to]: value } },
-    { new: true },
+    { returnDocument: 'after' },
   );
   if (!user) throw ApiError.paymentRequired(`Not enough ${from === 'bank' ? 'bank balance' : 'cash'}`);
   const balances = { cash: user.cash, bank: user.bank };

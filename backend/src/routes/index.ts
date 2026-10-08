@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, requireMode } from '../middleware/auth';
+import { authenticate, requireMode, requireRole } from '../middleware/auth';
 import { authLimiter } from '../middleware/rateLimit';
 import { validate } from '../middleware/validate';
 import { asyncHandler as h } from '../utils/asyncHandler';
@@ -11,6 +11,7 @@ import * as rideC from '../controllers/ride.controller';
 import * as walletC from '../controllers/wallet.controller';
 import * as eventC from '../controllers/event.controller';
 import * as worldC from '../controllers/world.controller';
+import * as adminC from '../controllers/admin.controller';
 
 const api = Router();
 
@@ -98,5 +99,10 @@ const events = Router();
 events.get('/', validate(S.eventsQuery, 'query'), h(eventC.list));
 events.post('/:id/resolve', validate(S.idParam, 'params'), validate(S.resolveEventSchema), h(eventC.resolve));
 api.use('/events', events);
+
+const admin = Router();
+admin.use(requireRole('ADMIN'));
+admin.get('/overview', h(adminC.overview));
+api.use('/admin', admin);
 
 export default api;

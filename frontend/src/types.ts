@@ -302,4 +302,5 @@ export interface CompleteSummary {
   ratingFactors?: Record<string, number>;
   levelUp?: { from: number; to: number; title: string } | null;
   late?: boolean;
+  unpaid?: number;
 }
